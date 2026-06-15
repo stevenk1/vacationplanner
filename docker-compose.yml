@@ -1,0 +1,31 @@
+services:
+  pocketbase:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      # First-run admin for the PocketBase dashboard (http://localhost:8090/_/)
+      PB_ADMIN_EMAIL: ${PB_ADMIN_EMAIL:-admin@example.com}
+      PB_ADMIN_PASSWORD: ${PB_ADMIN_PASSWORD:-changeme123}
+    volumes:
+      - pb_data:/pb/pb_data
+    ports:
+      - "${PB_PORT:-8090}:8090"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8090/api/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  web:
+    build: ./frontend
+    restart: unless-stopped
+    environment:
+      # Public Mapbox token, injected into the SPA at runtime (no rebuild needed)
+      MAPBOX_TOKEN: ${MAPBOX_TOKEN:-}
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      - pocketbase
+
+volumes:
+  pb_data:

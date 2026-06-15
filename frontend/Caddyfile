@@ -1,0 +1,16 @@
+:80 {
+	encode gzip
+	root * /srv
+
+	# Proxy PocketBase REST API + admin dashboard to the backend container.
+	@backend path /api/* /_ /_/*
+	handle @backend {
+		reverse_proxy pocketbase:8090
+	}
+
+	# SPA: serve the requested file, otherwise fall back to index.html.
+	handle {
+		try_files {path} /index.html
+		file_server
+	}
+}
