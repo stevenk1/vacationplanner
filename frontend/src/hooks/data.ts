@@ -194,6 +194,49 @@ export function useFetchPlacePhotos() {
   });
 }
 
+// ── Airbnb stay import ─────────────────────────────────────────────────────
+/** Normalized result of POST /api/airbnb/scrape (the backend holds the Apify token). */
+export interface AirbnbScrapeResult {
+  ok: boolean;
+  error?: string;
+  status?: number;
+  stayName?: string;
+  stayAddress?: string;
+  stayLat?: number;
+  stayLng?: number;
+  stayCountryCode?: string;
+  photoUrls?: string[];
+  price?: number | null;
+  currency?: string;
+  rating?: number | null;
+  reviewsCount?: number | null;
+  sourceUrl?: string;
+}
+
+/**
+ * Scrapes an Airbnb listing via Apify (server-side) and returns its name/address/coords,
+ * price/rating and photo URLs. Costs one Apify run — fired explicitly from the stay editor.
+ */
+export function useScrapeAirbnb() {
+  return useMutation({
+    mutationFn: (body: { url: string; checkIn?: string; checkOut?: string; adults?: number }) =>
+      pb.send('/api/airbnb/scrape', { method: 'POST', body }) as Promise<AirbnbScrapeResult>,
+  });
+}
+
+/**
+ * Asks the backend to download + cache the given Airbnb photo URLs onto a sub-period's stayPhotos
+ * (no Apify call). Fired in the background after the stay is saved; refreshes sub-periods when done.
+ */
+export function useFetchStayPhotos() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, photoUrls }: { id: string; photoUrls: string[] }) =>
+      pb.send(`/api/subperiods/${id}/stay-photos`, { method: 'POST', body: { photoUrls } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['subperiods'] }),
+  });
+}
+
 export function useRecomputePlace() {
   const qc = useQueryClient();
   return useMutation({

@@ -1,40 +1,44 @@
 import { useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import { Modal } from './ui/Modal';
-import { placePhotoUrls } from '../lib/pocketbase';
-import { categoryEmoji } from '../lib/categories';
-import type { Place } from '../types';
+
+/** A source-agnostic set of photos for the lightbox (a place's Google photos, a stay's Airbnb photos, …). */
+export interface LightboxItem {
+  title: string;
+  urls: string[];
+  attribution?: string; // e.g. author names — appended after the source label
+  sourceLabel?: string; // "Google" | "Airbnb"
+  sourceUrl?: string; // external link to the source/listing
+}
 
 interface Props {
-  place: Place | null;
+  item: LightboxItem | null;
   onClose: () => void;
 }
 
-/** A modal photo viewer for a place's cached Google Places photos (with carousel + attribution). */
-export function PhotoLightbox({ place, onClose }: Props) {
+/** A modal photo viewer with carousel + attribution, for any cached photo set (places or stays). */
+export function PhotoLightbox({ item, onClose }: Props) {
   const [idx, setIdx] = useState(0);
-  const urls = place ? placePhotoUrls(place, { thumb: '1200x900' }) : [];
+  const urls = item?.urls ?? [];
 
-  // Reset to the first photo whenever the viewed place changes.
-  useEffect(() => setIdx(0), [place?.id]);
+  // Reset to the first photo whenever the viewed item changes.
+  useEffect(() => setIdx(0), [item?.title, urls[0]]);
 
-  const open = !!place && urls.length > 0;
-  if (!open || !place) return null;
+  const open = !!item && urls.length > 0;
+  if (!open || !item) return null;
 
   const safe = Math.min(idx, urls.length - 1);
-  const authors = (place.photoAttribution ?? [])
-    .map((a) => a.displayName)
-    .filter(Boolean)
-    .slice(0, 2)
-    .join(', ');
   const step = (delta: number) => setIdx((i) => (i + delta + urls.length) % urls.length);
+  const credit = [item.sourceLabel ? `Photo via ${item.sourceLabel}` : '', item.attribution]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
-    <Modal open={open} onClose={onClose} title={`${categoryEmoji(place.category)} ${place.name}`} maxWidth="max-w-2xl">
+    <Modal open={open} onClose={onClose} title={item.title} maxWidth="max-w-2xl">
       <div className="relative">
         <img
           src={urls[safe]}
-          alt={place.name}
+          alt={item.title}
           loading="lazy"
           className="max-h-[70vh] w-full rounded-2xl bg-slate-50 object-contain"
         />
@@ -67,8 +71,18 @@ export function PhotoLightbox({ place, onClose }: Props) {
         )}
       </div>
 
-      <p className="mt-3 text-center text-[11px] text-slate-400">
-        Photo via Google{authors ? ` · ${authors}` : ''}
+      <p className="mt-3 flex items-center justify-center gap-2 text-center text-[11px] text-slate-400">
+        {credit}
+        {item.sourceUrl && (
+          <a
+            href={item.sourceUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-0.5 font-medium text-slate-500 hover:text-ink"
+          >
+            View on {item.sourceLabel ?? 'source'} <ExternalLink size={11} />
+          </a>
+        )}
       </p>
     </Modal>
   );

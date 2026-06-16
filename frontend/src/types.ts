@@ -14,6 +14,15 @@ export interface Holiday {
   updated?: string;
 }
 
+export interface StayListing {
+  price?: number | null;
+  currency?: string;
+  rating?: number | null;
+  reviewsCount?: number | null;
+  checkIn?: string;
+  checkOut?: string;
+}
+
 export interface SubPeriod {
   id: string;
   holiday: string;
@@ -26,8 +35,14 @@ export interface SubPeriod {
   stayLat: number;
   stayLng: number;
   stayCountryCode?: string;
+  stayAirbnbUrl?: string; // source Airbnb listing URL ("View on Airbnb")
+  stayPhotos?: string[]; // cached Airbnb listing photo filenames (served via PocketBase)
+  stayListing?: StayListing; // scraped price/rating metadata
   created?: string;
   updated?: string;
+  // PB also returns these; needed to build file URLs via pb.files.getUrl.
+  collectionId?: string;
+  collectionName?: string;
 }
 
 export interface PhotoAttribution {

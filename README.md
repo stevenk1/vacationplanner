@@ -47,7 +47,7 @@ cp .env.example .env
 docker compose up --build
 
 # 3. open
-#    App:              http://localhost:8080
+#    App:              http://localhost:31415
 #    PocketBase admin: http://localhost:8090/_/   (log in with PB_ADMIN_EMAIL / PB_ADMIN_PASSWORD)
 ```
 
@@ -60,7 +60,7 @@ That's it. The schema is created automatically on first start, and your data liv
 |----------|---------|
 | `MAPBOX_TOKEN` | Public Mapbox token — required for the map, search and driving times. Injected into the SPA at runtime (no rebuild needed when you change it; just restart the `web` container). |
 | `PB_ADMIN_EMAIL` / `PB_ADMIN_PASSWORD` | Login for the PocketBase admin dashboard. |
-| `WEB_PORT` / `PB_PORT` | Host ports (default `8080` / `8090`). |
+| `WEB_PORT` / `PB_PORT` | Host ports (default `31415` / `8090`). |
 
 ---
 
@@ -104,9 +104,9 @@ automatically on first start.
 ## 🗺️ How it works
 
 ```
-browser ──▶ web (Caddy :8080) ──┬─ /            → React SPA (+ /config.js with the Mapbox token)
-                                └─ /api, /_/    → reverse-proxy ─▶ pocketbase :8090 (REST + admin)
-                                                                    └─ pb_data volume (SQLite)
+browser ──▶ web (Caddy :31415) ──┬─ /            → React SPA (+ /config.js with the Mapbox token)
+                                  └─ /api, /_/    → reverse-proxy ─▶ pocketbase :8090 (REST + admin)
+                                                                      └─ pb_data volume (SQLite)
 ```
 
 - The SPA talks to PocketBase over same-origin `/api`, so there's no CORS and it works from any

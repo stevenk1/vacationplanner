@@ -1,13 +1,32 @@
 import { useState } from 'react';
-import { Home } from 'lucide-react';
+import { Home, Star } from 'lucide-react';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
 import { LocationSearch } from './LocationSearch';
 import { SUB_COLORS } from '../lib/palette';
 import { flagEmoji } from '../lib/countryTheme';
 import { toDateInput } from '../lib/format';
-import { useCreateSubPeriod, useUpdateSubPeriod } from '../hooks/data';
-import type { SubPeriod } from '../types';
+import {
+  useCreateSubPeriod,
+  useUpdateSubPeriod,
+  useScrapeAirbnb,
+  useFetchStayPhotos,
+} from '../hooks/data';
+import { stayPhotoUrls } from '../lib/pocketbase';
+import type { SubPeriod, StayListing } from '../types';
+
+function airbnbErrorMessage(code?: string): string {
+  switch (code) {
+    case 'no_api_key':
+      return "Airbnb import isn't configured (no Apify token on the server).";
+    case 'bad_url':
+      return 'Enter a valid Airbnb listing URL (e.g. https://www.airbnb.com/rooms/12345).';
+    case 'empty_dataset':
+      return "Couldn't find that listing — double-check the URL.";
+    default:
+      return 'Airbnb import failed. Please try again.';
+  }
+}
 
 interface Props {
   open: boolean;
@@ -30,10 +49,56 @@ export function SubPeriodForm({ open, onClose, holidayId, subperiod, defaultColo
   const [stayLat, setStayLat] = useState<number | undefined>(subperiod?.stayLat);
   const [stayLng, setStayLng] = useState<number | undefined>(subperiod?.stayLng);
   const [stayCountryCode, setStayCountryCode] = useState(subperiod?.stayCountryCode ?? '');
+  const [stayAirbnbUrl, setStayAirbnbUrl] = useState(subperiod?.stayAirbnbUrl ?? '');
+  const [listing, setListing] = useState<StayListing | undefined>(subperiod?.stayListing);
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  const [scrapeError, setScrapeError] = useState('');
 
   const create = useCreateSubPeriod();
   const update = useUpdateSubPeriod();
+  const scrape = useScrapeAirbnb();
+  const fetchStayPhotos = useFetchStayPhotos();
   const busy = create.isPending || update.isPending;
+
+  // Photos shown in the editor: freshly-scraped URLs if any, otherwise the already-cached stay photos.
+  const previewPhotos = photoUrls.length
+    ? photoUrls
+    : editing && subperiod?.stayPhotos?.length
+      ? stayPhotoUrls(subperiod, { thumb: '400x300' })
+      : [];
+
+  const fetchAirbnb = async () => {
+    const url = stayAirbnbUrl.trim();
+    if (!url || scrape.isPending) return;
+    setScrapeError('');
+    try {
+      const res = await scrape.mutateAsync({
+        url,
+        checkIn: startDate || undefined,
+        checkOut: endDate || undefined,
+      });
+      if (!res.ok) {
+        setScrapeError(airbnbErrorMessage(res.error));
+        return;
+      }
+      if (res.stayName) setStayName(res.stayName);
+      if (res.stayAddress) setStayAddress(res.stayAddress);
+      if (res.stayLat) setStayLat(res.stayLat);
+      if (res.stayLng) setStayLng(res.stayLng);
+      if (res.stayCountryCode) setStayCountryCode(res.stayCountryCode);
+      setPhotoUrls(res.photoUrls ?? []);
+      setListing({
+        price: res.price ?? null,
+        currency: res.currency ?? 'EUR',
+        rating: res.rating ?? null,
+        reviewsCount: res.reviewsCount ?? null,
+        checkIn: startDate || undefined,
+        checkOut: endDate || undefined,
+      });
+    } catch {
+      setScrapeError('Airbnb import failed. Please try again.');
+    }
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,13 +113,18 @@ export function SubPeriodForm({ open, onClose, holidayId, subperiod, defaultColo
       stayLat: stayLat ?? 0,
       stayLng: stayLng ?? 0,
       stayCountryCode,
+      stayAirbnbUrl,
+      stayListing: listing,
     };
+    let rec: SubPeriod;
     if (editing) {
       const stayMoved = stayLat !== subperiod!.stayLat || stayLng !== subperiod!.stayLng;
-      await update.mutateAsync({ id: subperiod!.id, data, recompute: stayMoved });
+      rec = await update.mutateAsync({ id: subperiod!.id, data, recompute: stayMoved });
     } else {
-      await create.mutateAsync({ ...data, holiday: holidayId });
+      rec = await create.mutateAsync({ ...data, holiday: holidayId });
     }
+    // Cache freshly-scraped Airbnb photos in the background (no extra Apify cost).
+    if (photoUrls.length) fetchStayPhotos.mutate({ id: rec.id, photoUrls });
     onClose();
   };
 
@@ -103,6 +173,56 @@ export function SubPeriodForm({ open, onClose, holidayId, subperiod, defaultColo
             <Home size={16} style={{ color }} /> Where you stay {stayCountryCode && <span>{flagEmoji(stayCountryCode)}</span>}
           </div>
           <div className="space-y-3">
+            <div className="space-y-2 rounded-xl bg-slate-50 p-2">
+              <div className="flex gap-2">
+                <input
+                  className="input"
+                  type="url"
+                  value={stayAirbnbUrl}
+                  onChange={(e) => setStayAirbnbUrl(e.target.value)}
+                  placeholder="Paste an Airbnb listing URL to auto-fill…"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={fetchAirbnb}
+                  disabled={!stayAirbnbUrl.trim() || scrape.isPending}
+                >
+                  {scrape.isPending ? 'Fetching…' : 'Fetch'}
+                </Button>
+              </div>
+              {scrape.isPending && (
+                <p className="text-xs text-slate-400">Scraping the listing via Apify — this can take ~40s.</p>
+              )}
+              {scrapeError && <p className="text-xs text-rose-500">{scrapeError}</p>}
+              {listing && (listing.price != null || listing.rating != null) && (
+                <p className="flex items-center gap-3 text-xs text-slate-500">
+                  {listing.price != null && (
+                    <span>≈ {listing.currency ?? 'EUR'} {listing.price}/night</span>
+                  )}
+                  {listing.rating != null && (
+                    <span className="inline-flex items-center gap-1">
+                      <Star size={12} className="fill-amber-400 text-amber-400" /> {listing.rating}
+                      {listing.reviewsCount != null && (
+                        <span className="text-slate-400">({listing.reviewsCount})</span>
+                      )}
+                    </span>
+                  )}
+                </p>
+              )}
+              {previewPhotos.length > 0 && (
+                <div className="flex gap-2 overflow-x-auto">
+                  {previewPhotos.map((src, i) => (
+                    <img
+                      key={i}
+                      src={src}
+                      alt=""
+                      className="h-16 w-24 flex-none rounded-lg object-cover"
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
             <input className="input" value={stayName} onChange={(e) => setStayName(e.target.value)} placeholder="Accommodation name (e.g. Villa Mare)" />
             <LocationSearch
               defaultQuery={stayAddress}

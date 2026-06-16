@@ -22,6 +22,7 @@ const pbAdminPass  = builder.addParameter('pb-admin-password', { secret: true })
 // rather enter them in the dashboard. All hooks no-op when their values are blank/disabled.
 const env = (name: string) => process.env[name] ?? '';
 const googlePlacesKey = builder.addParameter('google-places-api-key', { secret: true });
+const apifyToken      = builder.addParameter('apify-token',          { secret: true }); // bare secret like google-places-api-key — Aspire persists it to user secrets (don't pass an env-sourced value: '' would clobber the saved secret each run)
 const s3Enabled       = builder.addParameter('s3-enabled',          { value: env('S3_ENABLED') });
 const s3Bucket        = builder.addParameter('s3-bucket',           { value: env('S3_BUCKET') });
 const s3Region        = builder.addParameter('s3-region',           { value: env('S3_REGION') });
@@ -37,6 +38,7 @@ const pocketbase = await builder.addDockerfile('pocketbase', './backend')
     .withEnvironment('PB_ADMIN_EMAIL', pbAdminEmail)
     .withEnvironment('PB_ADMIN_PASSWORD', pbAdminPass)
     .withEnvironment('GOOGLE_PLACES_API_KEY', googlePlacesKey) // server-side photo fetch (never reaches the browser)
+    .withEnvironment('APIFY_TOKEN', apifyToken)                // server-side Airbnb stay scrape (never reaches the browser)
     .withEnvironment('S3_ENABLED', s3Enabled)                  // optional object storage for uploaded photos
     .withEnvironment('S3_BUCKET', s3Bucket)
     .withEnvironment('S3_REGION', s3Region)

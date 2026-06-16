@@ -1,7 +1,8 @@
-import { CalendarRange, Home, MapPinned, Pencil, Plus, Trash2 } from 'lucide-react';
+import { CalendarRange, ExternalLink, Home, MapPinned, Pencil, Plus, Trash2 } from 'lucide-react';
 import { categoryEmoji } from '../lib/categories';
 import { fmtShortRange, fmtDuration } from '../lib/format';
 import { flagEmoji } from '../lib/countryTheme';
+import { stayPhotoUrls } from '../lib/pocketbase';
 import type { Place, SubPeriod } from '../types';
 
 interface Props {
@@ -43,11 +44,34 @@ export function SubPeriodCard({ sub, places, onEdit, onDelete, onAddPlace, onEdi
             </div>
           </div>
 
-          <p className="mt-2 flex items-center gap-1.5 text-xs text-slate-600">
-            <Home size={13} style={{ color: sub.color }} />
-            <span className="truncate">{sub.stayName || sub.stayAddress || 'No stay set'}</span>
-            {sub.stayCountryCode && <span>{flagEmoji(sub.stayCountryCode)}</span>}
-          </p>
+          <div className="mt-2 flex items-center gap-2">
+            {sub.stayPhotos?.length ? (
+              <img
+                src={stayPhotoUrls(sub, { thumb: '400x300' })[0]}
+                alt={sub.stayName}
+                loading="lazy"
+                className="h-9 w-12 flex-none rounded-md object-cover ring-1 ring-black/5"
+              />
+            ) : null}
+            <p className="flex min-w-0 flex-1 items-center gap-1.5 text-xs text-slate-600">
+              <Home size={13} style={{ color: sub.color }} />
+              <span className="truncate">{sub.stayName || sub.stayAddress || 'No stay set'}</span>
+              {sub.stayCountryCode && <span>{flagEmoji(sub.stayCountryCode)}</span>}
+            </p>
+            {sub.stayAirbnbUrl && (
+              <a
+                href={sub.stayAirbnbUrl}
+                target="_blank"
+                rel="noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="shrink-0 text-slate-400 hover:text-rose-500"
+                title="View on Airbnb"
+                aria-label="View on Airbnb"
+              >
+                <ExternalLink size={13} />
+              </a>
+            )}
+          </div>
 
           <ul className="mt-3 space-y-1">
             {places.map((p) => (

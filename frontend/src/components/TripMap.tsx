@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import MapGL, { Marker, Popup, NavigationControl, type MapRef } from 'react-map-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { Home, MapPinned } from 'lucide-react';
+import { Home, MapPinned, Star, ExternalLink } from 'lucide-react';
 import { MAPBOX_TOKEN, hasMapbox } from '../lib/config';
 import { categoryEmoji } from '../lib/categories';
 import { fmtDistance, fmtDuration } from '../lib/format';
-import { placePhotoUrls } from '../lib/pocketbase';
-import { PhotoLightbox } from './PhotoLightbox';
+import { placePhotoUrls, stayPhotoUrls } from '../lib/pocketbase';
+import { PhotoLightbox, type LightboxItem } from './PhotoLightbox';
 import type { Place, SubPeriod } from '../types';
 
 interface Props {
@@ -22,7 +22,7 @@ export function TripMap({ subs, places }: Props) {
   const mapRef = useRef<MapRef | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [sel, setSel] = useState<Selection>(null);
-  const [lightbox, setLightbox] = useState<Place | null>(null);
+  const [lightbox, setLightbox] = useState<LightboxItem | null>(null);
   const subById = useMemo(() => new Map(subs.map((s) => [s.id, s])), [subs]);
 
   const points = useMemo(() => {
@@ -137,12 +137,56 @@ export function TripMap({ subs, places }: Props) {
             if (!s || !hasCoords(s.stayLat, s.stayLng)) return null;
             return (
               <Popup longitude={s.stayLng} latitude={s.stayLat} anchor="bottom" offset={20} onClose={() => setSel(null)} closeButton={false}>
-                <div className="min-w-[150px]">
+                <div className="min-w-[160px]">
                   <p className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide" style={{ color: s.color }}>
                     <Home size={12} /> Stay
                   </p>
                   <p className="text-sm font-semibold text-ink">{s.stayName || 'Accommodation'}</p>
                   {s.stayAddress && <p className="text-xs text-slate-500">{s.stayAddress}</p>}
+                  {(s.stayListing?.price != null || s.stayListing?.rating != null) && (
+                    <p className="mt-1 flex items-center gap-2 text-xs text-slate-500">
+                      {s.stayListing?.price != null && (
+                        <span>≈ {s.stayListing.currency ?? 'EUR'} {s.stayListing.price}/night</span>
+                      )}
+                      {s.stayListing?.rating != null && (
+                        <span className="inline-flex items-center gap-0.5">
+                          <Star size={11} className="fill-amber-400 text-amber-400" /> {s.stayListing.rating}
+                        </span>
+                      )}
+                    </p>
+                  )}
+                  {s.stayPhotos?.length ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setLightbox({
+                          title: s.stayName || 'Stay',
+                          urls: stayPhotoUrls(s, { thumb: '1200x900' }),
+                          sourceLabel: 'Airbnb',
+                          sourceUrl: s.stayAirbnbUrl,
+                        })
+                      }
+                      className="mt-2 block w-full overflow-hidden rounded-lg ring-1 ring-black/5 transition hover:opacity-90"
+                      title="View photos"
+                    >
+                      <img
+                        src={stayPhotoUrls(s, { thumb: '400x300' })[0]}
+                        alt={s.stayName}
+                        loading="lazy"
+                        className="h-24 w-full object-cover"
+                      />
+                    </button>
+                  ) : null}
+                  {s.stayAirbnbUrl && (
+                    <a
+                      href={s.stayAirbnbUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-rose-500 hover:text-rose-600"
+                    >
+                      View on Airbnb <ExternalLink size={11} />
+                    </a>
+                  )}
                 </div>
               </Popup>
             );
@@ -170,7 +214,18 @@ export function TripMap({ subs, places }: Props) {
                   {p.photos?.length ? (
                     <button
                       type="button"
-                      onClick={() => setLightbox(p)}
+                      onClick={() =>
+                        setLightbox({
+                          title: `${categoryEmoji(p.category)} ${p.name}`,
+                          urls: placePhotoUrls(p, { thumb: '1200x900' }),
+                          attribution: (p.photoAttribution ?? [])
+                            .map((a) => a.displayName)
+                            .filter(Boolean)
+                            .slice(0, 2)
+                            .join(', '),
+                          sourceLabel: 'Google',
+                        })
+                      }
                       className="mt-2 block w-full overflow-hidden rounded-lg ring-1 ring-black/5 transition hover:opacity-90"
                       title="View photos"
                     >
@@ -206,7 +261,7 @@ export function TripMap({ subs, places }: Props) {
         </div>
       )}
 
-      <PhotoLightbox place={lightbox} onClose={() => setLightbox(null)} />
+      <PhotoLightbox item={lightbox} onClose={() => setLightbox(null)} />
     </div>
   );
 }

@@ -8,6 +8,8 @@ services:
       PB_ADMIN_PASSWORD: ${PB_ADMIN_PASSWORD:-changeme123}
       # Server-side only: Google Places key for fetching place photos (optional, never sent to the browser)
       GOOGLE_PLACES_API_KEY: ${GOOGLE_PLACES_API_KEY:-}
+      # Server-side only: Apify API token for importing Airbnb stays (optional, never sent to the browser)
+      APIFY_TOKEN: ${APIFY_TOKEN:-}
       # Optional S3-compatible object storage for uploaded photos (see .env.example)
       S3_ENABLED: ${S3_ENABLED:-false}
       S3_BUCKET: ${S3_BUCKET:-}
@@ -33,7 +35,7 @@ services:
       # Public Mapbox token, injected into the SPA at runtime (no rebuild needed)
       MAPBOX_TOKEN: ${MAPBOX_TOKEN:-}
     ports:
-      - "${WEB_PORT:-8080}:80"
+      - "${WEB_PORT:-31415}:80"
     depends_on:
       - pocketbase
 
