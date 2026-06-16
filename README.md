@@ -64,6 +64,43 @@ That's it. The schema is created automatically on first start, and your data liv
 
 ---
 
+## 🧰 Run with .NET Aspire (local dev orchestration)
+
+A **.NET Aspire AppHost** ([`apphost.mts`](apphost.mts)) is included as an alternative to the manual
+two-terminal flow. It boots the PocketBase backend (built from `backend/Dockerfile`) and the Vite dev
+server together behind the **Aspire dashboard** — one command, unified logs/traces, and automatic
+startup ordering. Aspire assigns ports dynamically and injects the PocketBase URL into the frontend,
+so nothing is hard-coded. `docker compose` remains the production path; this is for development.
+
+**Prerequisites:** Docker running, the [Aspire CLI](https://aspire.dev) and the .NET 10 SDK
+(`aspire doctor` checks everything).
+
+```bash
+# 1. configure (same .env as Docker Compose)
+cp .env.example .env        # set MAPBOX_TOKEN, PB_ADMIN_EMAIL, PB_ADMIN_PASSWORD
+
+# 2. one-time: regenerate the AppHost's TypeScript SDK bindings
+aspire restore
+
+# 3. provide the AppHost parameters from .env, then run
+set -a; . ./.env; set +a
+export Parameters__mapbox_token="$MAPBOX_TOKEN" \
+       Parameters__pb_admin_email="$PB_ADMIN_EMAIL" \
+       Parameters__pb_admin_password="$PB_ADMIN_PASSWORD"
+aspire run
+```
+
+The dashboard opens automatically. From it, open the **frontend** endpoint for the app and the
+**pocketbase** endpoint's `/_/` for the admin UI. The frontend's npm dependencies are installed
+automatically on first start.
+
+> Parameters are declared in the AppHost and shown as resources in the dashboard; their values come
+> from the `Parameters__*` environment variables above (you can also use
+> [user secrets](https://aka.ms/aspire/user-secrets) or let the dashboard prompt on first run).
+> The manual two-terminal flow below still works unchanged.
+
+---
+
 ## 🗺️ How it works
 
 ```
