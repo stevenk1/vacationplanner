@@ -59,6 +59,8 @@ export interface Place {
   lng: number;
   category: string;
   notes?: string;
+  visited?: boolean;
+  openingHours?: string[]; // 7 strings Mon–Sun: "Monday: 9:00 AM – 5:00 PM"
   driveSeconds?: number;
   driveMeters?: number;
   photos?: string[]; // cached Google Places photo filenames (served via PocketBase)

@@ -49,7 +49,7 @@ routerAdd("POST", "/api/places/{id}/photos", (e) => {
       headers: {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": apiKey,
-        "X-Goog-FieldMask": "places.id,places.displayName,places.photos",
+        "X-Goog-FieldMask": "places.id,places.displayName,places.photos,places.regularOpeningHours",
       },
       body: JSON.stringify(searchBody),
       timeout: 20,
@@ -86,9 +86,11 @@ routerAdd("POST", "/api/places/{id}/photos", (e) => {
       return e.json(200, { count: 0, error: "download_failed" });
     }
 
-    // 3) Cache on the record (replaces any previous photos).
+    // 3) Cache on the record (replaces any previous photos + refreshes hours).
     record.set("photos", files);
     record.set("photoAttribution", attributions);
+    const hours = (place.regularOpeningHours && place.regularOpeningHours.weekdayDescriptions) || null;
+    if (hours) record.set("openingHours", hours);
     e.app.save(record);
 
     return e.json(200, { count: files.length });

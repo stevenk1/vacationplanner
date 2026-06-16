@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { CalendarRange, ChevronDown, ExternalLink, Home, MapPinned, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { CalendarRange, CheckCircle2, ChevronDown, Circle, ExternalLink, Home, MapPinned, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import clsx from 'clsx';
 import { CATEGORIES, categoryEmoji } from '../lib/categories';
 import { fmtShortRange, fmtDuration, fmtDistance } from '../lib/format';
 import { flagEmoji } from '../lib/countryTheme';
 import { stayPhotoUrls } from '../lib/pocketbase';
-import { useRecomputePlace } from '../hooks/data';
+import { useRecomputePlace, useUpdatePlace } from '../hooks/data';
 import type { Place, SubPeriod } from '../types';
 
 interface Props {
@@ -26,6 +26,7 @@ interface Props {
 export function SubPeriodCard({ sub, places, collapsed, selectedPlaceId, onToggle, onEdit, onDelete, onAddPlace, onEditPlace, onDeletePlace, onSelectPlace }: Props) {
   const [tab, setTab] = useState<'places' | 'drive'>('places');
   const recompute = useRecomputePlace();
+  const updatePlace = useUpdatePlace();
   const range = fmtShortRange(sub.startDate, sub.endDate);
   const stay = { lat: sub.stayLat, lng: sub.stayLng };
   const hasStay = !!(sub.stayLat || sub.stayLng);
@@ -161,10 +162,20 @@ export function SubPeriodCard({ sub, places, collapsed, selectedPlaceId, onToggl
                                   className={clsx(
                                     'group flex cursor-pointer items-center gap-2 rounded-lg px-1.5 py-1 transition',
                                     selectedPlaceId === p.id ? 'bg-slate-100 ring-1 ring-slate-200' : 'hover:bg-slate-50',
+                                    p.visited && 'opacity-50',
                                   )}
                                 >
-                                  <span className="text-base leading-none">{categoryEmoji(p.category)}</span>
-                                  <span className="min-w-0 flex-1 truncate text-sm text-ink">{p.name}</span>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); updatePlace.mutate({ id: p.id, data: { visited: !p.visited } }); }}
+                                    className="shrink-0 text-slate-300 transition hover:text-slate-500"
+                                    aria-label={p.visited ? 'Mark as not visited' : 'Mark as visited'}
+                                  >
+                                    {p.visited
+                                      ? <CheckCircle2 size={15} className="text-green-500" />
+                                      : <Circle size={15} />}
+                                  </button>
+                                  <span className={clsx('text-base leading-none', p.visited && 'grayscale')}>{categoryEmoji(p.category)}</span>
+                                  <span className={clsx('min-w-0 flex-1 truncate text-sm text-ink', p.visited && 'line-through')}>{p.name}</span>
                                   {p.driveSeconds ? (
                                     <span className="shrink-0 text-xs font-medium text-slate-400">🚗 {fmtDuration(p.driveSeconds)}</span>
                                   ) : null}
@@ -195,10 +206,20 @@ export function SubPeriodCard({ sub, places, collapsed, selectedPlaceId, onToggl
                               className={clsx(
                                 'flex cursor-pointer items-center gap-2 rounded-lg px-1.5 py-1.5 transition',
                                 selectedPlaceId === p.id ? 'bg-slate-100 ring-1 ring-slate-200' : 'hover:bg-slate-50',
+                                p.visited && 'opacity-50',
                               )}
                             >
-                              <span className="text-base leading-none">{categoryEmoji(p.category)}</span>
-                              <span className="min-w-0 flex-1 truncate text-sm text-ink">{p.name}</span>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); updatePlace.mutate({ id: p.id, data: { visited: !p.visited } }); }}
+                                className="shrink-0 text-slate-300 transition hover:text-slate-500"
+                                aria-label={p.visited ? 'Mark as not visited' : 'Mark as visited'}
+                              >
+                                {p.visited
+                                  ? <CheckCircle2 size={15} className="text-green-500" />
+                                  : <Circle size={15} />}
+                              </button>
+                              <span className={clsx('text-base leading-none', p.visited && 'grayscale')}>{categoryEmoji(p.category)}</span>
+                              <span className={clsx('min-w-0 flex-1 truncate text-sm text-ink', p.visited && 'line-through')}>{p.name}</span>
                               <span className="shrink-0 text-right">
                                 <span className="block text-xs font-semibold" style={{ color: sub.color }}>
                                   🚗 {fmtDuration(p.driveSeconds)}

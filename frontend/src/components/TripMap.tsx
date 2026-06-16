@@ -223,6 +223,25 @@ export function TripMap({ subs, places, selectedPlaceId, onSelectPlace }: Props)
                   ) : (
                     <p className="mt-1 text-xs text-slate-400">No driving time yet</p>
                   )}
+                  {p.openingHours?.length ? (() => {
+                    const todayIdx = (new Date().getDay() + 6) % 7;
+                    const todayLine = p.openingHours[todayIdx];
+                    const todayValue = todayLine?.split(': ').slice(1).join(': ');
+                    return (
+                      <details className="mt-2 text-xs text-slate-500">
+                        <summary className="cursor-pointer list-none font-medium text-slate-600 hover:text-ink">
+                          🕐 Today: {todayValue ?? '—'}
+                        </summary>
+                        <ul className="mt-1 space-y-0.5 pl-1">
+                          {p.openingHours.map((line, i) => (
+                            <li key={i} className={i === todayIdx ? 'font-semibold text-ink' : ''}>
+                              {line}
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
+                    );
+                  })() : null}
                   {p.photos?.length ? (
                     <button
                       type="button"
