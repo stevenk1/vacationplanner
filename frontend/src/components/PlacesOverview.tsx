@@ -9,11 +9,12 @@ import type { Place, SubPeriod } from '../types';
 interface Props {
   subs: SubPeriod[];
   places: Place[];
+  onSelectPlace?: (id: string) => void;
 }
 
 type Sort = 'time' | 'name';
 
-export function PlacesOverview({ subs, places }: Props) {
+export function PlacesOverview({ subs, places, onSelectPlace }: Props) {
   const [sort, setSort] = useState<Sort>('time');
   const recompute = useRecomputePlace();
 
@@ -62,7 +63,7 @@ export function PlacesOverview({ subs, places }: Props) {
                 {list.map((p) => {
                   const pending = recompute.isPending && recompute.variables?.place.id === p.id;
                   return (
-                    <li key={p.id} className="group flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-50">
+                    <li key={p.id} onClick={() => onSelectPlace?.(p.id)} className="group flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-50">
                       <span className="text-base leading-none">{categoryEmoji(p.category)}</span>
                       <span className="min-w-0 flex-1 truncate text-sm text-ink">{p.name}</span>
                       <span className="shrink-0 text-right">
@@ -73,7 +74,7 @@ export function PlacesOverview({ subs, places }: Props) {
                       </span>
                       {hasStay && (
                         <button
-                          onClick={() => recompute.mutate({ place: p, stay })}
+                          onClick={(e) => { e.stopPropagation(); recompute.mutate({ place: p, stay }); }}
                           disabled={pending}
                           className="grid h-6 w-6 shrink-0 place-items-center rounded text-slate-300 hover:text-slate-600 group-hover:text-slate-400"
                           title="Recompute driving time"

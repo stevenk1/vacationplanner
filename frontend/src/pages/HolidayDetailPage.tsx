@@ -39,6 +39,20 @@ export default function HolidayDetailPage() {
   const [editHoliday, setEditHoliday] = useState(false);
   const [subForm, setSubForm] = useState<{ open: boolean; sub?: SubPeriod | null }>({ open: false });
   const [placeForm, setPlaceForm] = useState<{ open: boolean; sub: SubPeriod; place?: Place | null } | null>(null);
+  const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
+  const [collapsedSubs, setCollapsedSubs] = useState<Set<string>>(new Set());
+
+  const toggleSub = (id: string) => {
+    setCollapsedSubs((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+    if (!collapsedSubs.has(id) && selectedPlaceId) {
+      if (places.some((p) => p.id === selectedPlaceId && p.subperiod === id))
+        setSelectedPlaceId(null);
+    }
+  };
 
   if (holiday.isLoading) {
     return <div className="card h-64 animate-pulse" />;
@@ -57,6 +71,9 @@ export default function HolidayDetailPage() {
   const h = holiday.data;
   const theme = getCountryTheme(h.countryCode, h.accentOverride || undefined);
   const days = tripLength(h.startDate, h.endDate);
+
+  const visibleSubs = subs.filter((s) => !collapsedSubs.has(s.id));
+  const visiblePlaces = places.filter((p) => !collapsedSubs.has(p.subperiod));
 
   const removeHoliday = async () => {
     if (!confirm(`Delete "${h.title}" and everything in it?`)) return;
@@ -133,6 +150,8 @@ export default function HolidayDetailPage() {
                 key={s.id}
                 sub={s}
                 places={places.filter((p) => p.subperiod === s.id)}
+                collapsed={collapsedSubs.has(s.id)}
+                onToggle={() => toggleSub(s.id)}
                 onEdit={() => setSubForm({ open: true, sub: s })}
                 onDelete={async () => {
                   if (confirm(`Delete sub-period "${s.name}" and its places?`)) await delSub.mutateAsync(s.id);
@@ -157,10 +176,10 @@ export default function HolidayDetailPage() {
         <section className="lg:col-span-8">
           <div className="grid gap-5 xl:grid-cols-3">
             <div className="h-[360px] lg:h-[520px] xl:col-span-2">
-              <TripMap subs={subs} places={places} />
+              <TripMap subs={visibleSubs} places={visiblePlaces} selectedPlaceId={selectedPlaceId} onSelectPlace={setSelectedPlaceId} />
             </div>
             <div className="h-[420px] lg:h-[520px] xl:col-span-1">
-              <PlacesOverview subs={subs} places={places} />
+              <PlacesOverview subs={visibleSubs} places={visiblePlaces} onSelectPlace={setSelectedPlaceId} />
             </div>
           </div>
         </section>

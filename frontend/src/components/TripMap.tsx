@@ -12,13 +12,15 @@ import type { Place, SubPeriod } from '../types';
 interface Props {
   subs: SubPeriod[];
   places: Place[];
+  selectedPlaceId?: string | null;
+  onSelectPlace?: (id: string | null) => void;
 }
 
 type Selection = { kind: 'stay' | 'place'; id: string } | null;
 
 const hasCoords = (lat?: number, lng?: number) => !!(lat || lng);
 
-export function TripMap({ subs, places }: Props) {
+export function TripMap({ subs, places, selectedPlaceId, onSelectPlace }: Props) {
   const mapRef = useRef<MapRef | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [sel, setSel] = useState<Selection>(null);
@@ -52,6 +54,15 @@ export function TripMap({ subs, places }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded, coordKey]);
 
+  useEffect(() => {
+    if (!selectedPlaceId || !loaded) return;
+    const p = places.find((x) => x.id === selectedPlaceId);
+    if (!p || !hasCoords(p.lat, p.lng)) return;
+    mapRef.current?.easeTo({ center: [p.lng, p.lat], zoom: 13, duration: 600 });
+    setSel({ kind: 'place', id: selectedPlaceId });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPlaceId, loaded]);
+
   if (!hasMapbox) {
     return (
       <div className="grid h-full place-items-center rounded-3xl bg-slate-100 p-8 text-center">
@@ -76,7 +87,7 @@ export function TripMap({ subs, places }: Props) {
         mapStyle="mapbox://styles/mapbox/streets-v12"
         style={{ width: '100%', height: '100%' }}
         onLoad={() => setLoaded(true)}
-        onClick={() => setSel(null)}
+        onClick={() => { setSel(null); onSelectPlace?.(null); }}
       >
         <NavigationControl position="top-right" showCompass={false} />
 
@@ -117,6 +128,7 @@ export function TripMap({ subs, places }: Props) {
               onClick={(e) => {
                 e.originalEvent.stopPropagation();
                 setSel({ kind: 'place', id: p.id });
+                onSelectPlace?.(p.id);
               }}
             >
               <div
@@ -136,7 +148,7 @@ export function TripMap({ subs, places }: Props) {
             const s = subById.get(sel.id);
             if (!s || !hasCoords(s.stayLat, s.stayLng)) return null;
             return (
-              <Popup longitude={s.stayLng} latitude={s.stayLat} anchor="bottom" offset={20} onClose={() => setSel(null)} closeButton={false}>
+              <Popup longitude={s.stayLng} latitude={s.stayLat} anchor="bottom" offset={20} onClose={() => { setSel(null); onSelectPlace?.(null); }} closeButton={false}>
                 <div className="min-w-[160px]">
                   <p className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide" style={{ color: s.color }}>
                     <Home size={12} /> Stay
@@ -198,7 +210,7 @@ export function TripMap({ subs, places }: Props) {
             if (!p) return null;
             const s = subById.get(p.subperiod);
             return (
-              <Popup longitude={p.lng} latitude={p.lat} anchor="bottom" offset={16} onClose={() => setSel(null)} closeButton={false}>
+              <Popup longitude={p.lng} latitude={p.lat} anchor="bottom" offset={16} onClose={() => { setSel(null); onSelectPlace?.(null); }} closeButton={false}>
                 <div className="min-w-[160px]">
                   <p className="text-sm font-semibold text-ink">
                     {categoryEmoji(p.category)} {p.name}
