@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, CalendarDays, MapPin, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, CalendarDays, LayoutList, MapPin, Pencil, Plus, Trash2 } from 'lucide-react';
+import clsx from 'clsx';
 import {
   useDeleteHoliday,
   useDeletePlace,
@@ -12,6 +13,7 @@ import {
 import { getCountryTheme } from '../lib/countryTheme';
 import { fmtDateRange, toDateInput, tripLength } from '../lib/format';
 import { colorForIndex } from '../lib/palette';
+import { categoryEmoji, categoryLabel } from '../lib/categories';
 import { FlagBand } from '../components/FlagBand';
 import { Button } from '../components/ui/Button';
 import { HolidayForm } from '../components/HolidayForm';
@@ -19,7 +21,6 @@ import { SubPeriodForm } from '../components/SubPeriodForm';
 import { SubPeriodCard } from '../components/SubPeriodCard';
 import { PlaceForm } from '../components/PlaceForm';
 import { TripMap } from '../components/TripMap';
-import { PlacesOverview } from '../components/PlacesOverview';
 import type { Place, SubPeriod } from '../types';
 
 export default function HolidayDetailPage() {
@@ -41,6 +42,7 @@ export default function HolidayDetailPage() {
   const [placeForm, setPlaceForm] = useState<{ open: boolean; sub: SubPeriod; place?: Place | null } | null>(null);
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
   const [collapsedSubs, setCollapsedSubs] = useState<Set<string>>(new Set());
+  const [filterCat, setFilterCat] = useState<string | null>(null);
 
   const toggleSub = (id: string) => {
     setCollapsedSubs((prev) => {
@@ -74,6 +76,8 @@ export default function HolidayDetailPage() {
 
   const visibleSubs = subs.filter((s) => !collapsedSubs.has(s.id));
   const visiblePlaces = places.filter((p) => !collapsedSubs.has(p.subperiod));
+  const activeCategories = [...new Set(places.map((p) => p.category))];
+  const filteredPlaces = filterCat ? visiblePlaces.filter((p) => p.category === filterCat) : visiblePlaces;
 
   const removeHoliday = async () => {
     if (!confirm(`Delete "${h.title}" and everything in it?`)) return;
@@ -108,6 +112,16 @@ export default function HolidayDetailPage() {
                   <p className="mt-1 flex items-center gap-1.5 text-sm text-white/90">
                     <MapPin size={15} /> <span className="truncate">{h.locationName}</span>
                   </p>
+                )}
+                {(subs.length > 0 || places.length > 0) && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <span className="chip bg-white/20 text-white backdrop-blur">
+                      <LayoutList size={12} /> {subs.length} stop{subs.length !== 1 ? 's' : ''}
+                    </span>
+                    <span className="chip bg-white/20 text-white backdrop-blur">
+                      <MapPin size={12} /> {places.length} place{places.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
                 )}
               </div>
             </div>
@@ -144,6 +158,25 @@ export default function HolidayDetailPage() {
             </Button>
           </div>
 
+          {activeCategories.length > 1 && (
+            <div className="mb-3 flex gap-1.5 overflow-x-auto pb-1">
+              {activeCategories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setFilterCat((f) => (f === cat ? null : cat))}
+                  className={clsx(
+                    'chip shrink-0 transition',
+                    filterCat === cat
+                      ? 'bg-ink text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200',
+                  )}
+                >
+                  {categoryEmoji(cat)} {categoryLabel(cat)}
+                </button>
+              ))}
+            </div>
+          )}
+
           <div className="space-y-3">
             {subs.map((s) => (
               <SubPeriodCard
@@ -151,6 +184,7 @@ export default function HolidayDetailPage() {
                 sub={s}
                 places={places.filter((p) => p.subperiod === s.id)}
                 collapsed={collapsedSubs.has(s.id)}
+                selectedPlaceId={selectedPlaceId}
                 onToggle={() => toggleSub(s.id)}
                 onEdit={() => setSubForm({ open: true, sub: s })}
                 onDelete={async () => {
@@ -161,6 +195,7 @@ export default function HolidayDetailPage() {
                 onDeletePlace={async (p) => {
                   if (confirm(`Remove "${p.name}"?`)) await delPlace.mutateAsync(p.id);
                 }}
+                onSelectPlace={setSelectedPlaceId}
               />
             ))}
 
@@ -172,15 +207,10 @@ export default function HolidayDetailPage() {
           </div>
         </section>
 
-        {/* Map + overview */}
+        {/* Map */}
         <section className="lg:col-span-8">
-          <div className="grid gap-5 xl:grid-cols-3">
-            <div className="h-[360px] lg:h-[520px] xl:col-span-2">
-              <TripMap subs={visibleSubs} places={visiblePlaces} selectedPlaceId={selectedPlaceId} onSelectPlace={setSelectedPlaceId} />
-            </div>
-            <div className="h-[420px] lg:h-[520px] xl:col-span-1">
-              <PlacesOverview subs={visibleSubs} places={visiblePlaces} onSelectPlace={setSelectedPlaceId} />
-            </div>
+          <div className="h-[400px] lg:h-[560px]">
+            <TripMap subs={visibleSubs} places={filteredPlaces} selectedPlaceId={selectedPlaceId} onSelectPlace={setSelectedPlaceId} />
           </div>
         </section>
       </div>

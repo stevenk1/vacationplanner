@@ -1,25 +1,41 @@
+import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { CalendarRange, ChevronDown, ExternalLink, Home, MapPinned, Pencil, Plus, Trash2 } from 'lucide-react';
-import { categoryEmoji } from '../lib/categories';
-import { fmtShortRange, fmtDuration } from '../lib/format';
+import { CalendarRange, ChevronDown, ExternalLink, Home, MapPinned, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import clsx from 'clsx';
+import { CATEGORIES, categoryEmoji } from '../lib/categories';
+import { fmtShortRange, fmtDuration, fmtDistance } from '../lib/format';
 import { flagEmoji } from '../lib/countryTheme';
 import { stayPhotoUrls } from '../lib/pocketbase';
+import { useRecomputePlace } from '../hooks/data';
 import type { Place, SubPeriod } from '../types';
 
 interface Props {
   sub: SubPeriod;
   places: Place[];
   collapsed: boolean;
+  selectedPlaceId?: string | null;
   onToggle: () => void;
   onEdit: () => void;
   onDelete: () => void;
   onAddPlace: () => void;
   onEditPlace: (p: Place) => void;
   onDeletePlace: (p: Place) => void;
+  onSelectPlace?: (id: string) => void;
 }
 
-export function SubPeriodCard({ sub, places, collapsed, onToggle, onEdit, onDelete, onAddPlace, onEditPlace, onDeletePlace }: Props) {
+export function SubPeriodCard({ sub, places, collapsed, selectedPlaceId, onToggle, onEdit, onDelete, onAddPlace, onEditPlace, onDeletePlace, onSelectPlace }: Props) {
+  const [tab, setTab] = useState<'places' | 'drive'>('places');
+  const recompute = useRecomputePlace();
   const range = fmtShortRange(sub.startDate, sub.endDate);
+  const stay = { lat: sub.stayLat, lng: sub.stayLng };
+  const hasStay = !!(sub.stayLat || sub.stayLng);
+
+  const grouped = CATEGORIES
+    .map((cat) => ({ cat, items: places.filter((p) => p.category === cat.value) }))
+    .filter((g) => g.items.length > 0);
+
+  const sortedByDrive = [...places].sort((a, b) => (a.driveSeconds ?? Infinity) - (b.driveSeconds ?? Infinity));
+
   return (
     <div className="card overflow-hidden">
       <div className="flex">
@@ -43,6 +59,18 @@ export function SubPeriodCard({ sub, places, collapsed, onToggle, onEdit, onDele
               {range && (
                 <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
                   <CalendarRange size={13} /> {range}
+                </p>
+              )}
+              {collapsed && places.length > 0 && (
+                <p className="mt-1.5 flex flex-wrap gap-1">
+                  {[...new Set(places.map((p) => p.category))].slice(0, 4).map((cat) => (
+                    <span key={cat} className="chip bg-slate-100 text-slate-500 px-2 py-0.5 text-[11px]">
+                      {categoryEmoji(cat)}
+                    </span>
+                  ))}
+                  <span className="chip bg-slate-100 text-slate-500 px-2 py-0.5 text-[11px]">
+                    {places.length} places
+                  </span>
                 </p>
               )}
             </button>
@@ -95,30 +123,107 @@ export function SubPeriodCard({ sub, places, collapsed, onToggle, onEdit, onDele
                   )}
                 </div>
 
-                <ul className="mt-3 space-y-1">
-                  {places.map((p) => (
-                    <li key={p.id} className="group flex items-center gap-2 rounded-lg px-1.5 py-1 hover:bg-slate-50">
-                      <span className="text-base leading-none">{categoryEmoji(p.category)}</span>
-                      <span className="min-w-0 flex-1 truncate text-sm text-ink">{p.name}</span>
-                      {p.driveSeconds ? (
-                        <span className="shrink-0 text-xs font-medium text-slate-400">🚗 {fmtDuration(p.driveSeconds)}</span>
-                      ) : null}
-                      <span className="hidden shrink-0 gap-0.5 group-hover:flex">
-                        <button onClick={() => onEditPlace(p)} className="grid h-6 w-6 place-items-center rounded text-slate-400 hover:text-slate-700" aria-label="Edit place">
-                          <Pencil size={12} />
+                {places.length === 0 ? (
+                  <p className="mt-3 flex items-center gap-2 px-1.5 py-1 text-xs text-slate-400">
+                    <MapPinned size={13} /> No places yet
+                  </p>
+                ) : (
+                  <>
+                    <div className="mt-3 flex gap-1 rounded-xl bg-slate-100 p-1">
+                      {(['places', 'drive'] as const).map((t) => (
+                        <button
+                          key={t}
+                          onClick={() => setTab(t)}
+                          className={clsx(
+                            'flex-1 rounded-lg py-1 text-xs font-semibold transition',
+                            tab === t ? 'bg-white shadow-sm text-ink' : 'text-slate-500 hover:text-ink',
+                          )}
+                        >
+                          {t === 'places' ? 'Places' : '🚗 Drive times'}
                         </button>
-                        <button onClick={() => onDeletePlace(p)} className="grid h-6 w-6 place-items-center rounded text-slate-400 hover:text-rose-600" aria-label="Delete place">
-                          <Trash2 size={12} />
-                        </button>
-                      </span>
-                    </li>
-                  ))}
-                  {places.length === 0 && (
-                    <li className="flex items-center gap-2 px-1.5 py-1 text-xs text-slate-400">
-                      <MapPinned size={13} /> No places yet
-                    </li>
-                  )}
-                </ul>
+                      ))}
+                    </div>
+
+                    {tab === 'places' && (
+                      <ul className="mt-3 space-y-2">
+                        {grouped.map(({ cat, items }) => (
+                          <li key={cat.value}>
+                            {grouped.length > 1 && (
+                              <p className="mb-1 px-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                {cat.emoji} {cat.label}
+                              </p>
+                            )}
+                            <ul className="space-y-0.5">
+                              {items.map((p) => (
+                                <li
+                                  key={p.id}
+                                  onClick={() => onSelectPlace?.(p.id)}
+                                  className={clsx(
+                                    'group flex cursor-pointer items-center gap-2 rounded-lg px-1.5 py-1 transition',
+                                    selectedPlaceId === p.id ? 'bg-slate-100 ring-1 ring-slate-200' : 'hover:bg-slate-50',
+                                  )}
+                                >
+                                  <span className="text-base leading-none">{categoryEmoji(p.category)}</span>
+                                  <span className="min-w-0 flex-1 truncate text-sm text-ink">{p.name}</span>
+                                  {p.driveSeconds ? (
+                                    <span className="shrink-0 text-xs font-medium text-slate-400">🚗 {fmtDuration(p.driveSeconds)}</span>
+                                  ) : null}
+                                  <span className="hidden shrink-0 gap-0.5 group-hover:flex">
+                                    <button onClick={(e) => { e.stopPropagation(); onEditPlace(p); }} className="grid h-6 w-6 place-items-center rounded text-slate-400 hover:text-slate-700" aria-label="Edit place">
+                                      <Pencil size={12} />
+                                    </button>
+                                    <button onClick={(e) => { e.stopPropagation(); onDeletePlace(p); }} className="grid h-6 w-6 place-items-center rounded text-slate-400 hover:text-rose-600" aria-label="Delete place">
+                                      <Trash2 size={12} />
+                                    </button>
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
+                    {tab === 'drive' && (
+                      <ul className="mt-3 space-y-0.5">
+                        {sortedByDrive.map((p) => {
+                          const pending = recompute.isPending && recompute.variables?.place.id === p.id;
+                          return (
+                            <li
+                              key={p.id}
+                              onClick={() => onSelectPlace?.(p.id)}
+                              className={clsx(
+                                'flex cursor-pointer items-center gap-2 rounded-lg px-1.5 py-1.5 transition',
+                                selectedPlaceId === p.id ? 'bg-slate-100 ring-1 ring-slate-200' : 'hover:bg-slate-50',
+                              )}
+                            >
+                              <span className="text-base leading-none">{categoryEmoji(p.category)}</span>
+                              <span className="min-w-0 flex-1 truncate text-sm text-ink">{p.name}</span>
+                              <span className="shrink-0 text-right">
+                                <span className="block text-xs font-semibold" style={{ color: sub.color }}>
+                                  🚗 {fmtDuration(p.driveSeconds)}
+                                </span>
+                                {p.driveMeters ? (
+                                  <span className="block text-[11px] text-slate-400">{fmtDistance(p.driveMeters)}</span>
+                                ) : null}
+                              </span>
+                              {hasStay && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); recompute.mutate({ place: p, stay }); }}
+                                  disabled={pending}
+                                  className="grid h-6 w-6 shrink-0 place-items-center rounded text-slate-300 hover:text-slate-600"
+                                  title="Recompute driving time"
+                                >
+                                  <RefreshCw size={12} className={clsx(pending && 'animate-spin')} />
+                                </button>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </>
+                )}
 
                 <button
                   onClick={onAddPlace}
