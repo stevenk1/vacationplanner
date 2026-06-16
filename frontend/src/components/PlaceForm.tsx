@@ -5,7 +5,7 @@ import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
 import { LocationSearch } from './LocationSearch';
 import { CATEGORIES } from '../lib/categories';
-import { useCreatePlace, useUpdatePlace } from '../hooks/data';
+import { useCreatePlace, useFetchPlacePhotos, useUpdatePlace } from '../hooks/data';
 import type { Place, SubPeriod } from '../types';
 
 interface Props {
@@ -26,6 +26,7 @@ export function PlaceForm({ open, onClose, subperiod, place }: Props) {
 
   const create = useCreatePlace();
   const update = useUpdatePlace();
+  const fetchPhotos = useFetchPlacePhotos();
   const busy = create.isPending || update.isPending;
   const stay = { lat: subperiod.stayLat, lng: subperiod.stayLng };
   const hasStay = !!(subperiod.stayLat || subperiod.stayLng);
@@ -34,11 +35,17 @@ export function PlaceForm({ open, onClose, subperiod, place }: Props) {
     e.preventDefault();
     if (!name.trim() || lat == null || lng == null) return;
     const data: Partial<Place> = { name: name.trim(), address, lat, lng, category, notes };
+    let rec: Place;
+    let locationChanged = true;
     if (editing) {
-      await update.mutateAsync({ id: place!.id, data, stay });
+      rec = await update.mutateAsync({ id: place!.id, data, stay });
+      locationChanged = place!.lat !== lat || place!.lng !== lng;
     } else {
-      await create.mutateAsync({ data: { ...data, subperiod: subperiod.id }, stay });
+      rec = await create.mutateAsync({ data: { ...data, subperiod: subperiod.id }, stay });
     }
+    // Fetch a real photo in the background — only for new places or when the location moved,
+    // so editing notes/category doesn't trigger needless Google calls.
+    if (locationChanged) fetchPhotos.mutate(rec.id);
     onClose();
   };
 

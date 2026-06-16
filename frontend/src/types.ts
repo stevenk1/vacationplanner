@@ -30,6 +30,11 @@ export interface SubPeriod {
   updated?: string;
 }
 
+export interface PhotoAttribution {
+  displayName?: string;
+  uri?: string;
+}
+
 export interface Place {
   id: string;
   subperiod: string;
@@ -41,8 +46,13 @@ export interface Place {
   notes?: string;
   driveSeconds?: number;
   driveMeters?: number;
+  photos?: string[]; // cached Google Places photo filenames (served via PocketBase)
+  photoAttribution?: PhotoAttribution[];
   created?: string;
   updated?: string;
+  // PB also returns these; needed to build file URLs via pb.files.getUrl.
+  collectionId?: string;
+  collectionName?: string;
 }
 
 // Convenience shape used by the map + overview: a place joined to its sub-period.

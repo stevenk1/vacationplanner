@@ -182,6 +182,18 @@ export function useDeletePlace() {
   });
 }
 
+/**
+ * Asks the backend to fetch + cache Google Places photos for a place (key stays server-side).
+ * Fired in the background after a place is added or moved; refreshes places when done.
+ */
+export function useFetchPlacePhotos() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => pb.send(`/api/places/${id}/photos`, { method: 'POST' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['places'] }),
+  });
+}
+
 export function useRecomputePlace() {
   const qc = useQueryClient();
   return useMutation({

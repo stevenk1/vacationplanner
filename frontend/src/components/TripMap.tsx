@@ -5,6 +5,8 @@ import { Home, MapPinned } from 'lucide-react';
 import { MAPBOX_TOKEN, hasMapbox } from '../lib/config';
 import { categoryEmoji } from '../lib/categories';
 import { fmtDistance, fmtDuration } from '../lib/format';
+import { placePhotoUrls } from '../lib/pocketbase';
+import { PhotoLightbox } from './PhotoLightbox';
 import type { Place, SubPeriod } from '../types';
 
 interface Props {
@@ -20,6 +22,7 @@ export function TripMap({ subs, places }: Props) {
   const mapRef = useRef<MapRef | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [sel, setSel] = useState<Selection>(null);
+  const [lightbox, setLightbox] = useState<Place | null>(null);
   const subById = useMemo(() => new Map(subs.map((s) => [s.id, s])), [subs]);
 
   const points = useMemo(() => {
@@ -164,6 +167,21 @@ export function TripMap({ subs, places }: Props) {
                   ) : (
                     <p className="mt-1 text-xs text-slate-400">No driving time yet</p>
                   )}
+                  {p.photos?.length ? (
+                    <button
+                      type="button"
+                      onClick={() => setLightbox(p)}
+                      className="mt-2 block w-full overflow-hidden rounded-lg ring-1 ring-black/5 transition hover:opacity-90"
+                      title="View photos"
+                    >
+                      <img
+                        src={placePhotoUrls(p, { thumb: '400x300' })[0]}
+                        alt={p.name}
+                        loading="lazy"
+                        className="h-24 w-full object-cover"
+                      />
+                    </button>
+                  ) : null}
                 </div>
               </Popup>
             );
@@ -187,6 +205,8 @@ export function TripMap({ subs, places }: Props) {
           </div>
         </div>
       )}
+
+      <PhotoLightbox place={lightbox} onClose={() => setLightbox(null)} />
     </div>
   );
 }

@@ -14,12 +14,36 @@ const mapboxToken  = builder.addParameter('mapbox-token', { secret: true });
 const pbAdminEmail = builder.addParameter('pb-admin-email');
 const pbAdminPass  = builder.addParameter('pb-admin-password', { secret: true });
 
+// Server-side-only config for place photos + object storage.
+// The Google Places key is a bare secret parameter (like mapbox-token): Aspire prompts for it
+// in the dashboard on first run (masked), persists it to user secrets for later runs, and only
+// starts the PocketBase container once it's provided. The S3 settings stay optional with
+// env-sourced defaults — set them in .env / compose, or make them bare params too if you'd
+// rather enter them in the dashboard. All hooks no-op when their values are blank/disabled.
+const env = (name: string) => process.env[name] ?? '';
+const googlePlacesKey = builder.addParameter('google-places-api-key', { secret: true });
+const s3Enabled       = builder.addParameter('s3-enabled',          { value: env('S3_ENABLED') });
+const s3Bucket        = builder.addParameter('s3-bucket',           { value: env('S3_BUCKET') });
+const s3Region        = builder.addParameter('s3-region',           { value: env('S3_REGION') });
+const s3Endpoint      = builder.addParameter('s3-endpoint',         { value: env('S3_ENDPOINT') });
+const s3AccessKey     = builder.addParameter('s3-access-key',       { secret: true, value: env('S3_ACCESS_KEY') });
+const s3Secret        = builder.addParameter('s3-secret',           { secret: true, value: env('S3_SECRET') });
+const s3ForcePathStyle = builder.addParameter('s3-force-path-style', { value: env('S3_FORCE_PATH_STYLE') });
+
 // PocketBase backend. The container listens on :8090 (set in backend/docker-entrypoint.sh);
 // Aspire assigns the host/proxy port dynamically and the frontend discovers it below.
 const pocketbase = await builder.addDockerfile('pocketbase', './backend')
     .withHttpEndpoint({ targetPort: 8090 })
     .withEnvironment('PB_ADMIN_EMAIL', pbAdminEmail)
     .withEnvironment('PB_ADMIN_PASSWORD', pbAdminPass)
+    .withEnvironment('GOOGLE_PLACES_API_KEY', googlePlacesKey) // server-side photo fetch (never reaches the browser)
+    .withEnvironment('S3_ENABLED', s3Enabled)                  // optional object storage for uploaded photos
+    .withEnvironment('S3_BUCKET', s3Bucket)
+    .withEnvironment('S3_REGION', s3Region)
+    .withEnvironment('S3_ENDPOINT', s3Endpoint)
+    .withEnvironment('S3_ACCESS_KEY', s3AccessKey)
+    .withEnvironment('S3_SECRET', s3Secret)
+    .withEnvironment('S3_FORCE_PATH_STYLE', s3ForcePathStyle)
     .withVolume('/pb/pb_data', { name: 'vacationplanner-pb-data' }) // persist SQLite (compose pb_data)
     .withLifetime(ContainerLifetime.Persistent);
 
