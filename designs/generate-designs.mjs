@@ -198,99 +198,81 @@ function holidayDetail() {
   _id = 0;
   const E = [];
   const X = 40, Y = 40, W = 1180, H = 760;
-  screen(E, X, Y, W, H, 'Holiday detail', 'Themed hero · itinerary (sub-periods) · interactive map · "drive from stay" overview');
+  screen(E, X, Y, W, H, 'Holiday detail', 'Compact hero (title + date only) · itinerary · sticky map right col');
 
-  E.push(text(X + 24, Y + 18, '←  All holidays', { size: 14, color: MUTE }));
-
-  // hero banner — themed to the country (accent fill + flag-stripe ribbon)
   const C = COUNTRY.IT;
-  const hx = X + 24, hy = Y + 46, hw = W - 48, hh = 130;
-  E.push(rect(hx, hy, hw, hh, { bg: C.accent, stroke: C.accent }));
-  flagBand(E, hx + hw - 168, hy, 168, hh, C, { flag: false }); // flag-stripe ribbon on the right
-  E.push(text(hx + 24, hy + 30, C.flag, { size: 64 }));
-  E.push(text(hx + 110, hy + 24, 'Summer in Tuscany  ☀️', { size: 32, color: WHITE }));
-  E.push(text(hx + 112, hy + 72, '12 – 26 July 2026  ·  14 days', { size: 17, color: WHITE }));
-  E.push(text(hx + 112, hy + 98, '📍 Tuscany, Italy', { size: 15, color: WHITE }));
-  button(E, hx + hw - 168 - 124, hy + 22, 108, 40, '✎  Edit', { bg: WHITE, color: INK, stroke: WHITE });
+  const hx = X + 24, hy = Y + 46;
+  const contentW = W - 48; // 1132
+  const lw = 370;           // left column ≈ 4/12
+  const gap = 20;
+  const rw = contentW - lw - gap; // right column ≈ 8/12
+  const mx = hx + lw + gap;       // map x
 
-  const top = hy + hh + 24;
+  // Back link (top of left column)
+  E.push(text(hx, hy - 28, '←  All holidays', { size: 14, color: MUTE }));
 
-  // ---- left rail: itinerary (sub-periods) ----
-  const rx = X + 24, rw = 318;
-  E.push(text(rx, top, 'Itinerary', { size: 22 }));
+  // Hero — compact: just title + date, no flag band, no location, no chips
+  const hh = 80;
+  E.push(rect(hx, hy, lw, hh, { bg: C.accent, stroke: C.accent }));
+  E.push(text(hx + 16, hy + 12, 'Summer in Tuscany  ☀️', { size: 20, color: WHITE }));
+  E.push(text(hx + 18, hy + 44, '12 – 26 July 2026  ·  14 days', { size: 13, color: WHITE }));
+  // icon-only edit + delete buttons (top right)
+  E.push(rect(hx + lw - 84, hy + 10, 32, 32, { bg: 'rgba(255,255,255,0.18)', stroke: 'rgba(255,255,255,0)', round: true, rough: 0 }));
+  E.push(text(hx + lw - 78, hy + 16, '✎', { size: 15, color: WHITE }));
+  E.push(rect(hx + lw - 44, hy + 10, 32, 32, { bg: 'rgba(255,255,255,0.12)', stroke: 'rgba(255,255,255,0)', round: true, rough: 0 }));
+  E.push(text(hx + lw - 38, hy + 16, '🗑', { size: 15, color: WHITE }));
+
+  // Itinerary — left column, below hero
+  const itTop = hy + hh + 20;
+  E.push(text(hx, itTop, 'Itinerary', { size: 22 }));
   const subs = [
     { c: SUB[0], n: 'Coastal Days', d: '12 – 18 Jul', stay: 'Villa Mare, Viareggio', places: ['🏖️ Cinque Terre', '🍝 Lucca', '⛪ Pisa'] },
-    { c: SUB[1], n: 'Hilltop Towns', d: '18 – 22 Jul', stay: 'Agriturismo Siena', places: ['🏛️ Siena', '🍷 Montepulciano', '🌅 Val d’Orcia'] },
+    { c: SUB[1], n: 'Hilltop Towns', d: '18 – 22 Jul', stay: 'Agriturismo Siena', places: ['🏛️ Siena', '🍷 Montepulciano', '🌅 Val d\'Orcia'] },
     { c: SUB[2], n: 'City Finale', d: '22 – 26 Jul', stay: 'Hotel Firenze', places: ['🖼️ Uffizi', '🍦 Florence', '🏰 Fiesole'] },
   ];
-  let cy = top + 34;
+  let cy = itTop + 34;
   subs.forEach((s) => {
-    const ch = 52 + s.places.length * 24 + 16;
-    E.push(rect(rx, cy, rw, ch, { bg: WHITE, stroke: LINE }));
-    E.push(rect(rx, cy, 6, ch, { bg: s.c, stroke: s.c }));
-    E.push(ellipse(rx + 16, cy + 16, 12, 12, { bg: s.c, stroke: s.c, rough: 0 }));
-    E.push(text(rx + 36, cy + 12, s.n, { size: 17 }));
-    E.push(text(rx + rw - 96, cy + 14, s.d, { size: 12, color: MUTE }));
-    E.push(text(rx + 16, cy + 36, '🏠 ' + s.stay, { size: 13, color: MUTE }));
-    s.places.forEach((p, i) => E.push(text(rx + 24, cy + 60 + i * 24, p, { size: 14 })));
-    cy += ch + 14;
+    const sh = 52 + s.places.length * 24 + 16;
+    E.push(rect(hx, cy, lw, sh, { bg: WHITE, stroke: LINE }));
+    E.push(rect(hx, cy, 6, sh, { bg: s.c, stroke: s.c }));
+    E.push(ellipse(hx + 16, cy + 16, 12, 12, { bg: s.c, stroke: s.c, rough: 0 }));
+    E.push(text(hx + 36, cy + 12, s.n, { size: 17 }));
+    E.push(text(hx + lw - 88, cy + 14, s.d, { size: 12, color: MUTE }));
+    E.push(text(hx + 16, cy + 36, '🏠 ' + s.stay, { size: 13, color: MUTE }));
+    s.places.forEach((p, i) => E.push(text(hx + 24, cy + 60 + i * 24, p, { size: 14 })));
+    cy += sh + 14;
   });
 
-  // ---- center: map ----
-  const mx = rx + rw + 22, mw = 506, mh = 472;
-  E.push(rect(mx, top, mw, mh, { bg: '#eaf1f1', stroke: LINE }));
-  E.push(text(mx + 14, top + 12, '🗺️  Map  ·  stays + places, colored per sub-period', { size: 13, color: MUTE }));
+  // Map — right column, spans full height from hero top to itinerary bottom (sticky)
+  const mh = cy - hy + 10;
+  E.push(rect(mx, hy, rw, mh, { bg: '#eaf1f1', stroke: LINE }));
+  E.push(text(mx + 14, hy + 12, '🗺️  Map  ·  sticky · spans hero + itinerary height', { size: 13, color: MUTE }));
   // fake roads
-  E.push(seg(mx + 60, top + 120, [[0, 0], [120, 60], [260, 40], [380, 130]], { stroke: '#c4d4d4', sw: 2 }));
-  E.push(seg(mx + 90, top + 360, [[0, 0], [90, -80], [230, -40], [330, -150]], { stroke: '#c4d4d4', sw: 2 }));
+  E.push(seg(mx + 60, hy + 120, [[0, 0], [120, 60], [260, 40], [400, 130]], { stroke: '#c4d4d4', sw: 2 }));
+  E.push(seg(mx + 90, hy + 380, [[0, 0], [100, -90], [260, -50], [380, -170]], { stroke: '#c4d4d4', sw: 2 }));
   // markers: stays (home) + places (pins) colored by sub-period
   const pin = (px, py, label, color, home) => {
     E.push(ellipse(px, py, 26, 26, { bg: color, stroke: WHITE, sw: 2, rough: 0 }));
     E.push(text(px + 4, py + 4, home ? '🏠' : '📍', { size: 14, color: WHITE }));
     if (label) E.push(text(px + 30, py + 4, label, { size: 12, color: INK }));
   };
-  pin(mx + 70, top + 100, 'Villa Mare', SUB[0], true);
-  pin(mx + 150, top + 150, 'Cinque Terre', SUB[0]);
-  pin(mx + 110, top + 210, 'Lucca', SUB[0]);
-  pin(mx + 250, top + 250, 'Agriturismo', SUB[1], true);
-  pin(mx + 320, top + 200, 'Siena', SUB[1]);
-  pin(mx + 360, top + 320, 'Hotel Firenze', SUB[2], true);
-  pin(mx + 300, top + 380, 'Uffizi', SUB[2]);
+  pin(mx + 70,  hy + 100, 'Villa Mare',   SUB[0], true);
+  pin(mx + 150, hy + 170, 'Cinque Terre', SUB[0]);
+  pin(mx + 110, hy + 230, 'Lucca',        SUB[0]);
+  pin(mx + 320, hy + 190, 'Agriturismo',  SUB[1], true);
+  pin(mx + 400, hy + 210, 'Siena',        SUB[1]);
+  pin(mx + 450, hy + 370, 'Hotel Firenze',SUB[2], true);
+  pin(mx + 370, hy + 440, 'Uffizi',       SUB[2]);
   // popup callout example
-  E.push(rect(mx + 150, top + 150 - 64, 230, 52, { bg: WHITE, stroke: INK, sw: 1 }));
-  E.push(text(mx + 162, top + 150 - 56, 'Cinque Terre', { size: 13 }));
-  E.push(text(mx + 162, top + 150 - 38, '🚗 1h 25m · 92 km from stay', { size: 12, color: MUTE }));
+  E.push(rect(mx + 150, hy + 106, 230, 52, { bg: WHITE, stroke: INK, sw: 1 }));
+  E.push(text(mx + 162, hy + 114, 'Cinque Terre', { size: 13 }));
+  E.push(text(mx + 162, hy + 132, '🚗 1h 25m · 92 km from stay', { size: 12, color: MUTE }));
   // legend
-  E.push(rect(mx + 12, top + mh - 70, 190, 58, { bg: WHITE, stroke: LINE }));
-  E.push(text(mx + 22, top + mh - 62, '🏠 Stay     📍 Place', { size: 12 }));
+  E.push(rect(mx + 12, hy + mh - 70, 190, 58, { bg: WHITE, stroke: LINE }));
+  E.push(text(mx + 22, hy + mh - 62, '🏠 Stay     📍 Place', { size: 12 }));
   subs.forEach((s, i) => {
-    E.push(ellipse(mx + 22 + i * 58, top + mh - 38, 11, 11, { bg: s.c, stroke: s.c, rough: 0 }));
-    E.push(text(mx + 36 + i * 58, top + mh - 40, s.n.split(' ')[0], { size: 10, color: MUTE }));
-  });
-
-  // ---- right: drive-from-stay overview ----
-  const ox = mx + mw + 22, ow = W - 48 - (ox - (X + 24));
-  E.push(rect(ox, top, ow, mh, { bg: WHITE, stroke: LINE }));
-  E.push(text(ox + 16, top + 14, '⏱  Drive from stay', { size: 17 }));
-  E.push(text(ox + ow - 92, top + 18, 'sort: time ▾', { size: 12, color: MUTE }));
-  E.push(seg(ox + 12, top + 46, [[0, 0], [ow - 24, 0]], { stroke: LINE }));
-  const rows = [
-    { g: subs[0], items: [['🍝 Lucca', '22m', '24 km'], ['⛪ Pisa', '35m', '41 km'], ['🏖️ Cinque Terre', '1h 25m', '92 km']] },
-    { g: subs[1], items: [['🏛️ Siena', '15m', '12 km'], ['🍷 Montepulciano', '48m', '55 km'], ['🌅 Val d’Orcia', '40m', '46 km']] },
-    { g: subs[2], items: [['🍦 Florence', '8m', '5 km'], ['🖼️ Uffizi', '10m', '6 km'], ['🏰 Fiesole', '20m', '14 km']] },
-  ];
-  let ry = top + 58;
-  rows.forEach((r) => {
-    E.push(ellipse(ox + 16, ry + 3, 10, 10, { bg: r.g.c, stroke: r.g.c, rough: 0 }));
-    E.push(text(ox + 32, ry, r.g.n + '  ·  🏠 ' + r.g.stay.split(',')[0], { size: 12, color: MUTE }));
-    ry += 26;
-    r.items.forEach((it) => {
-      E.push(text(ox + 20, ry, it[0], { size: 14 }));
-      E.push(text(ox + ow - 118, ry, '🚗 ' + it[1], { size: 13, color: r.g.c }));
-      E.push(text(ox + ow - 52, ry, it[2], { size: 12, color: MUTE }));
-      ry += 26;
-    });
-    ry += 10;
+    E.push(ellipse(mx + 22 + i * 58, hy + mh - 38, 11, 11, { bg: s.c, stroke: s.c, rough: 0 }));
+    E.push(text(mx + 36 + i * 58, hy + mh - 40, s.n.split(' ')[0], { size: 10, color: MUTE }));
   });
 
   file('02-holiday-detail.excalidraw', E);
@@ -383,7 +365,7 @@ function forms() {
   E.push(rect(x3 + 24, y + 20, mw - 48, 48, { bg: WHITE, stroke: LINE })); y += 84;
   E.push(rect(x3 + 24, y, mw - 48, 50, { bg: '#eef6f5', stroke: '#2a9d8f' }));
   E.push(text(x3 + 36, y + 9, '🚗 Driving time is auto-calculated', { size: 12, color: '#2a9d8f' }));
-  E.push(text(x3 + 36, y + 27, 'from Villa Mare (this sub-period’s stay)', { size: 12, color: '#2a9d8f' }));
+  E.push(text(x3 + 36, y + 27, 'from Villa Mare (this sub-period\'s stay)', { size: 12, color: '#2a9d8f' }));
   footer(x3, 'Add');
 
   file('03-forms.excalidraw', E);
@@ -468,6 +450,99 @@ function mobile() {
   file('04-mobile-responsive.excalidraw', E);
 }
 
+// =========================================================================
+// 05 — Mobile map-focus
+// =========================================================================
+function mobileMapFocus() {
+  _id = 0;
+  const E = [];
+  const X = 40, Y = 40, W = 820, H = 760;
+  screen(E, X, Y, W, H, 'Mobile map-focus', 'Screen A: full-height map (default) · Screen B: list view with Map toggle');
+
+  const C = COUNTRY.IT;
+
+  const phone = (px, label) => {
+    E.push(rect(px, Y + 30, 300, 640, { bg: WHITE, stroke: '#94a3b8', sw: 2 }));
+    E.push(rect(px + 110, Y + 30, 80, 18, { bg: '#94a3b8', stroke: '#94a3b8' })); // notch
+    E.push(text(px, Y + 690, label, { size: 13, color: MUTE, align: 'center', width: 300 }));
+    return { x: px, top: Y + 60 };
+  };
+
+  // ── Screen A: Map view ─────────────────────────────────────────────────
+  const a = phone(X + 60, 'Map view — default on mobile');
+
+  // Full-height map tile (fills phone interior below notch)
+  E.push(rect(a.x + 16, a.top, 264, 520, { bg: '#eaf1f1', stroke: LINE }));
+  E.push(text(a.x + 26, a.top + 10, '🗺️ Map  ·  full-height on mobile', { size: 11, color: MUTE }));
+
+  // Fake roads
+  E.push(seg(a.x + 40, a.top + 100, [[0, 0], [80, 50], [180, 30], [240, 110]], { stroke: '#c4d4d4', sw: 2 }));
+  E.push(seg(a.x + 60, a.top + 340, [[0, 0], [80, -70], [180, -40], [220, -150]], { stroke: '#c4d4d4', sw: 2 }));
+
+  // Stay markers
+  E.push(ellipse(a.x + 60, a.top + 90, 22, 22, { bg: SUB[0], stroke: WHITE, sw: 2, rough: 0 }));
+  E.push(text(a.x + 64, a.top + 93, '🏠', { size: 11 }));
+  E.push(ellipse(a.x + 190, a.top + 220, 22, 22, { bg: SUB[1], stroke: WHITE, sw: 2, rough: 0 }));
+  E.push(text(a.x + 194, a.top + 223, '🏠', { size: 11 }));
+
+  // Place markers
+  E.push(ellipse(a.x + 120, a.top + 150, 18, 18, { bg: SUB[0], stroke: WHITE, sw: 2, rough: 0 }));
+  E.push(text(a.x + 124, a.top + 153, '📍', { size: 9 }));
+  E.push(ellipse(a.x + 90, a.top + 260, 18, 18, { bg: SUB[0], stroke: WHITE, sw: 2, rough: 0 }));
+  E.push(text(a.x + 94, a.top + 263, '📍', { size: 9 }));
+  E.push(ellipse(a.x + 220, a.top + 300, 18, 18, { bg: SUB[1], stroke: WHITE, sw: 2, rough: 0 }));
+  E.push(text(a.x + 224, a.top + 303, '📍', { size: 9 }));
+
+  // Floating "≡ List" pill button (centered near bottom of map)
+  button(E, a.x + 88, a.top + 466, 108, 36, '≡  List', { bg: WHITE, color: INK, stroke: LINE });
+
+  // ── Screen B: List view ────────────────────────────────────────────────
+  const b = phone(X + 460, 'List view — tap "Map" to return');
+
+  // Compact hero
+  E.push(rect(b.x + 16, b.top, 264, 70, { bg: C.accent, stroke: C.accent }));
+  flagBand(E, b.x + 16 + 264 - 56, b.top, 56, 70, C, { flag: false });
+  E.push(text(b.x + 28, b.top + 18, C.flag, { size: 26 }));
+  E.push(text(b.x + 66, b.top + 12, 'Summer in Tuscany', { size: 15, color: WHITE }));
+  E.push(text(b.x + 66, b.top + 38, '12 – 26 Jul · ☀️', { size: 12, color: WHITE }));
+
+  // Itinerary heading + "🗺 Map" toggle button
+  const itY = b.top + 86;
+  E.push(text(b.x + 16, itY, 'Itinerary', { size: 17 }));
+  button(E, b.x + 190, itY - 2, 72, 28, '🗺  Map', { bg: SUB[0] });
+
+  // Category filter chips
+  const chipY = itY + 34;
+  let cx = b.x + 16;
+  [['🏖 Beach', SUB[0], true], ['🍝 Food', 'transparent'], ['🌿 Nature', 'transparent']].forEach(([n, bg, on]) => {
+    const w = String(n).length * 7 + 20;
+    E.push(rect(cx, chipY, w, 26, { bg: on ? SUB[0] : WHITE, stroke: on ? SUB[0] : LINE, round: true }));
+    E.push(text(cx + 8, chipY + 5, String(n), { size: 12, color: on ? WHITE : INK }));
+    cx += w + 8;
+  });
+
+  // Two collapsed SubPeriodCard previews
+  const cardSubs = [
+    { c: SUB[0], n: 'Coastal Days', d: '12 – 18 Jul', count: '8 places' },
+    { c: SUB[1], n: 'Hilltop Towns', d: '18 – 26 Jul', count: '6 places' },
+  ];
+  let cardY = chipY + 40;
+  cardSubs.forEach((s) => {
+    const sh = 54;
+    E.push(rect(b.x + 16, cardY, 264, sh, { bg: WHITE, stroke: LINE }));
+    E.push(rect(b.x + 16, cardY, 5, sh, { bg: s.c, stroke: s.c, round: false }));
+    E.push(ellipse(b.x + 30, cardY + 14, 12, 12, { bg: s.c, stroke: s.c, rough: 0 }));
+    E.push(text(b.x + 48, cardY + 10, s.n, { size: 15 }));
+    E.push(text(b.x + 160, cardY + 12, s.d, { size: 11, color: MUTE }));
+    // place count chip
+    E.push(rect(b.x + 48, cardY + 32, 56, 16, { bg: TINT, stroke: LINE, round: true }));
+    E.push(text(b.x + 54, cardY + 34, s.count, { size: 10, color: MUTE }));
+    cardY += sh + 10;
+  });
+
+  file('05-mobile-map-focus.excalidraw', E);
+}
+
 // ---- run -----------------------------------------------------------------
 mkdirSync(OUT, { recursive: true });
 console.log('Generating Excalidraw wireframes:');
@@ -475,4 +550,5 @@ holidaysList();
 holidayDetail();
 forms();
 mobile();
+mobileMapFocus();
 console.log('Done.');

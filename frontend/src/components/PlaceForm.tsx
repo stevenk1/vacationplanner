@@ -72,10 +72,16 @@ export function PlaceForm({ open, onClose, subperiod, place }: Props) {
             }}
           />
           {name && (
-            <p className="mt-1.5 text-xs text-slate-500">
-              Selected: <span className="font-semibold text-ink">{name}</span>
-              {address ? ` — ${address}` : ''}
-            </p>
+            <div className="mt-2">
+              <label className="label">Display name</label>
+              <input
+                className="input"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={name}
+              />
+              {address && <p className="mt-1 text-xs text-slate-400 truncate">{address}</p>}
+            </div>
           )}
         </div>
 

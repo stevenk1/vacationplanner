@@ -158,6 +158,7 @@ export function SubPeriodCard({ sub, places, collapsed, selectedPlaceId, onToggl
                               {items.map((p) => (
                                 <li
                                   key={p.id}
+                                  id={`place-${p.id}`}
                                   onClick={() => onSelectPlace?.(p.id)}
                                   className={clsx(
                                     'group flex cursor-pointer items-center gap-2 rounded-lg px-1.5 py-1 transition',

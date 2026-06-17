@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, CalendarDays, LayoutList, MapPin, Pencil, Plus, Trash2 } from 'lucide-react';
 import clsx from 'clsx';
@@ -43,6 +43,27 @@ export default function HolidayDetailPage() {
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
   const [collapsedSubs, setCollapsedSubs] = useState<Set<string>>(new Set());
   const [filterCat, setFilterCat] = useState<string | null>(null);
+  const [mobileView, setMobileView] = useState<'map' | 'list'>('map');
+
+  useEffect(() => {
+    if (!selectedPlaceId) return;
+    const place = places.find((p) => p.id === selectedPlaceId);
+    if (place) {
+      setCollapsedSubs((prev) => {
+        if (!prev.has(place.subperiod)) return prev;
+        const next = new Set(prev);
+        next.delete(place.subperiod);
+        return next;
+      });
+    }
+    const t = setTimeout(() => {
+      document.getElementById(`place-${selectedPlaceId}`)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+      });
+    }, 250);
+    return () => clearTimeout(t);
+  }, [selectedPlaceId, places]);
 
   const toggleSub = (id: string) => {
     setCollapsedSubs((prev) => {
@@ -86,22 +107,23 @@ export default function HolidayDetailPage() {
   };
 
   return (
-    <div className="animate-fade-up">
-      <Link to="/" className="mb-3 inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-ink">
+    <div className="animate-fade-up lg:grid lg:grid-cols-12 lg:gap-x-5">
+      <div className={clsx('flex flex-col gap-4 lg:col-span-4', mobileView === 'list' ? 'flex' : 'hidden lg:flex')}>
+      <Link to="/" className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-ink">
         <ArrowLeft size={16} /> All holidays
       </Link>
 
       {/* Hero */}
       <div className="relative overflow-hidden rounded-3xl shadow-card" style={{ backgroundColor: theme.accent }}>
-        <div className="absolute right-0 top-0 h-full w-32 sm:w-44">
+        <div className="absolute right-0 top-0 h-full w-32 sm:w-44 lg:hidden">
           <FlagBand theme={theme} rounded="rounded-none" className="h-full" showFlag={false} />
         </div>
-        <div className="relative p-6 text-white sm:p-8">
+        <div className="relative p-6 text-white sm:p-8 lg:p-4">
           <div className="flex items-start justify-between gap-3">
-            <div className="flex min-w-0 items-start gap-4 sm:pr-32">
-              <span className="hidden text-6xl leading-none sm:block">{theme.flag}</span>
+            <div className="flex min-w-0 items-start gap-4 sm:pr-32 lg:pr-0">
+              <span className="hidden text-6xl leading-none sm:block lg:hidden">{theme.flag}</span>
               <div className="min-w-0">
-                <h1 className="font-display text-2xl font-extrabold leading-tight sm:text-3xl">
+                <h1 className="font-display text-2xl font-extrabold leading-tight sm:text-3xl lg:text-xl">
                   {h.title} {h.emoji && <span>{h.emoji}</span>}
                 </h1>
                 <p className="mt-2 flex items-center gap-1.5 text-sm text-white/90">
@@ -109,12 +131,12 @@ export default function HolidayDetailPage() {
                   {days ? ` · ${days} days` : ''}
                 </p>
                 {h.locationName && (
-                  <p className="mt-1 flex items-center gap-1.5 text-sm text-white/90">
+                  <p className="mt-1 flex items-center gap-1.5 text-sm text-white/90 lg:hidden">
                     <MapPin size={15} /> <span className="truncate">{h.locationName}</span>
                   </p>
                 )}
                 {(subs.length > 0 || places.length > 0) && (
-                  <div className="mt-3 flex flex-wrap gap-2">
+                  <div className="mt-3 flex flex-wrap gap-2 lg:hidden">
                     <span className="chip bg-white/20 text-white backdrop-blur">
                       <LayoutList size={12} /> {subs.length} stop{subs.length !== 1 ? 's' : ''}
                     </span>
@@ -127,7 +149,7 @@ export default function HolidayDetailPage() {
             </div>
             <div className="z-10 flex shrink-0 gap-2">
               <Button variant="primary" accent="rgba(255,255,255,.18)" onClick={() => setEditHoliday(true)} className="backdrop-blur">
-                <Pencil size={15} /> <span className="hidden sm:inline">Edit</span>
+                <Pencil size={15} /> <span className="hidden sm:inline lg:hidden">Edit</span>
               </Button>
               <button
                 onClick={removeHoliday}
@@ -142,20 +164,26 @@ export default function HolidayDetailPage() {
       </div>
 
       {h.notes && (
-        <p className="mt-4 whitespace-pre-wrap rounded-2xl bg-white p-4 text-sm text-slate-600 shadow-card ring-1 ring-slate-100">
+        <p className="whitespace-pre-wrap rounded-2xl bg-white p-4 text-sm text-slate-600 shadow-card ring-1 ring-slate-100">
           {h.notes}
         </p>
       )}
 
-      {/* Body */}
-      <div className="mt-6 grid gap-5 lg:grid-cols-12">
         {/* Itinerary rail */}
-        <section className="lg:col-span-4">
+        <section>
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-display text-lg font-bold text-ink">Itinerary</h2>
-            <Button accent={theme.accent} onClick={() => setSubForm({ open: true, sub: null })} className="px-3 py-2">
-              <Plus size={15} /> Sub-period
-            </Button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setMobileView('map')}
+                className="lg:hidden flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-sm font-semibold text-ink hover:bg-slate-200"
+              >
+                <MapPin size={14} /> Map
+              </button>
+              <Button accent={theme.accent} onClick={() => setSubForm({ open: true, sub: null })} className="px-3 py-2">
+                <Plus size={15} /> Sub-period
+              </Button>
+            </div>
           </div>
 
           {activeCategories.length > 1 && (
@@ -206,14 +234,27 @@ export default function HolidayDetailPage() {
             )}
           </div>
         </section>
-
-        {/* Map */}
-        <section className="lg:col-span-8">
-          <div className="h-[400px] lg:h-[560px]">
-            <TripMap subs={visibleSubs} places={filteredPlaces} selectedPlaceId={selectedPlaceId} onSelectPlace={setSelectedPlaceId} />
-          </div>
-        </section>
       </div>
+
+      {/* Map — sticky right column spanning full height */}
+      <section className={clsx(
+        'lg:col-span-8 lg:sticky lg:top-[3.5rem] lg:mt-0 lg:h-[calc(100vh-4rem)] lg:block',
+        mobileView === 'map' ? 'h-[calc(100dvh-3.5rem)]' : 'hidden',
+      )}>
+        <TripMap subs={visibleSubs} places={filteredPlaces} selectedPlaceId={selectedPlaceId} onSelectPlace={setSelectedPlaceId} />
+      </section>
+
+      {/* Mobile floating "List" toggle — only in map view */}
+      {mobileView === 'map' && (
+        <div className="fixed bottom-6 left-1/2 z-20 -translate-x-1/2 lg:hidden">
+          <button
+            onClick={() => setMobileView('list')}
+            className="flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold text-ink shadow-lg ring-1 ring-slate-200"
+          >
+            <LayoutList size={16} /> List
+          </button>
+        </div>
+      )}
 
       {/* Modals */}
       <HolidayForm open={editHoliday} onClose={() => setEditHoliday(false)} holiday={h} />

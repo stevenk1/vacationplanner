@@ -22,6 +22,7 @@ const hasCoords = (lat?: number, lng?: number) => !!(lat || lng);
 
 export function TripMap({ subs, places, selectedPlaceId, onSelectPlace }: Props) {
   const mapRef = useRef<MapRef | null>(null);
+  const clickedFromMap = useRef(false);
   const [loaded, setLoaded] = useState(false);
   const [sel, setSel] = useState<Selection>(null);
   const [lightbox, setLightbox] = useState<LightboxItem | null>(null);
@@ -56,6 +57,11 @@ export function TripMap({ subs, places, selectedPlaceId, onSelectPlace }: Props)
 
   useEffect(() => {
     if (!selectedPlaceId || !loaded) return;
+    if (clickedFromMap.current) {
+      clickedFromMap.current = false;
+      setSel({ kind: 'place', id: selectedPlaceId });
+      return;
+    }
     const p = places.find((x) => x.id === selectedPlaceId);
     if (!p || !hasCoords(p.lat, p.lng)) return;
     mapRef.current?.easeTo({ center: [p.lng, p.lat], zoom: 13, duration: 600 });
@@ -78,7 +84,7 @@ export function TripMap({ subs, places, selectedPlaceId, onSelectPlace }: Props)
   const start = points[0] ?? { lng: 10, lat: 46 };
 
   return (
-    <div className="relative h-full w-full overflow-hidden rounded-3xl">
+    <div className="relative h-full w-full overflow-hidden lg:rounded-3xl">
       <MapGL
         ref={mapRef}
         reuseMaps
@@ -127,6 +133,7 @@ export function TripMap({ subs, places, selectedPlaceId, onSelectPlace }: Props)
               anchor="center"
               onClick={(e) => {
                 e.originalEvent.stopPropagation();
+                clickedFromMap.current = true;
                 setSel({ kind: 'place', id: p.id });
                 onSelectPlace?.(p.id);
               }}
